@@ -25,6 +25,10 @@ import re
 import os
 from myFFmpeg import try_def_coding as tfp
 
+USERAGRNT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.169 Safari/537.36'
+COOKIE = 'LIVE_BUVID=AUTO1515149705744511; fts=1514987102; pgv_pvi=531680256; im_notify_type_40745909=0; CURRENT_FNVAL=16; pos=3; _uuid=FEA87AF3-C1D8-61D8-D1D5-86926BCC7C6359589infoc; Hm_lvt_8a6e55dbd2870f0f5bc9194cddf32a02=1541642139; sid=jcfegf0q; UM_distinctid=1695a9be33e710-0abcff605d9c3f-b78173e-1fa400-1695a9be33f202; _ga=GA1.2.225038158.1554801061; stardustvideo=1; CURRENT_QUALITY=80; rpdid=|(k|Yu~JJR~Y0J\'ullY|u|RRJ; buvid3=F810EC7C-5FBA-4CA3-AED4-0C33783BB975110259infoc; bp_t_offset_40745909=267878733752395000; DedeUserID=40745909; DedeUserID__ckMd5=50c54dcd485a8634; SESSDATA=c98630a9%2C1564112324%2C9668b961; bili_jct=7688604cbb8ec892bb3acf6df63485cd; finger=b3372c5f'
+
+
 def get_urlJson_Video(User_Mid):
     '''
     找到了可用的请求，获取视频列表主要是aid,由于不知道是不是flv格式，所以单个视频下载比较好，不批量搞
@@ -32,8 +36,7 @@ def get_urlJson_Video(User_Mid):
     '''
     url = 'https://space.bilibili.com/ajax/member/getSubmitVideos?'
     headers = {
-        'User-Agent':
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.99 Safari/537.36',
+        'User-Agent':USERAGRNT,
     }
 
     params = {
@@ -81,14 +84,12 @@ def get_playerURL_Vide0_m4s(url,aid,User_Mid,local_path = None,index=None):
         'Connection': 'keep-alive',
         'Cache-Control': 'max-age = 0',
         'Upgrade-Insecure-Requests': '1',
-        'User-Agent':
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.80 Safari/537.36',
+        'User-Agent':USERAGRNT,
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
         'Referer': 'https://space.bilibilicom/'+str(User_Mid)+'/',  #这里是up主号 要注意
         'Accept-Encoding': 'gzip, deflate,br',
         'Accept-Language': 'zh-CN,zh;q=0.9',
-        'Cookie': 'LIVE_BUVID=AUTO1515149705744511; fts=1514987102; buvid3=24187AEB-8DF0-4376-866B-F1675054F7D123662infoc; pgv_pvi=531680256; rpdid=olpksilwwsdosoplqmoww; im_notify_type_40745909=0; stardustvideo=1; UM_distinctid=165af12253a9bc-01c9b0cc001639-74173d4f-1fa400-165af12253c332; CURRENT_FNVAL=16; pos=3; _uuid=FEA87AF3-C1D8-61D8-D1D5-86926BCC7C6359589infoc; Hm_lvt_8a6e55dbd2870f0f5bc9194cddf32a02=1541642139; sid=jcfegf0q; CURRENT_QUALITY=64; bp_t_offset_40745909=220192575153103178; finger=17c9e5f5; DedeUserID=40745909; DedeUserID__ckMd5=50c54dcd485a8634; SESSDATA=056c38dd%2C1553642772%2C3456a621; bili_jct=6c5769cf41bc49479ba0c8afb26bff6d; _dfcaptcha=44fdc9360b372c8e5a1cc6cd6fe9faf0'
-
+        'Cookie': COOKIE
     }
     print(url)
     requests.packages.urllib3.disable_warnings()
@@ -117,12 +118,19 @@ def get_playerURL_Vide0_m4s(url,aid,User_Mid,local_path = None,index=None):
     else:
         print('不是flv格式')
 
-    vedio_url = re.findall(r'"id":80,"baseUrl":"(.*?m4s.*?)?",',html.text)
-    print(vedio_url)
+    vedio_url_80 = re.findall(r'"id":80,"baseUrl":"(.*?m4s.*?)?",',html.text)
+    vedio_url_64 = re.findall(r'"id":64,"baseUrl":"(.*?m4s.*?)?",', html.text)
+    if len(vedio_url_80) == 0:
+        print('720p')
+        vedio_url = vedio_url_64
+    else:
+        print('1080p')
+        vedio_url = vedio_url_80
+    print(vedio_url[0])
     if len(vedio_url) > 0:
         print('————下面是MP4视频下载阶段————')
         try:
-            download_flv(vedio_url[0],str(aid),local_path,'mp4')
+            download_flv(vedio_url[0],str(aid),local_path,'mp4')        #是否是备用url呢  虚实相间啊
             print("视频下载结束")
         except BaseException as e:
             print("出错了：",e)
@@ -131,7 +139,7 @@ def get_playerURL_Vide0_m4s(url,aid,User_Mid,local_path = None,index=None):
         print('不是mp4格式，放弃吧')
 
     html = requests.get(url, headers=header, verify=False)
-    audio_url  = re.findall(r'"id":30280,"baseUrl":"(.*?m4s.*?)?","backupUrl"',html.text)
+    audio_url  = re.findall(r'"id":30280,"baseUrl":"(.*?m4s.*?)?",',html.text)
     print(audio_url)
     if len(audio_url) > 0:
         print('————下面是MP3音频下载阶段————')
@@ -146,13 +154,18 @@ def get_playerURL_Vide0_m4s(url,aid,User_Mid,local_path = None,index=None):
         print('不是mp3格式，放弃吧')
 
 
-
-
-
 def download_flv(url,aid,local_path = None,file_type = 'flv',file_name = None):
     if not os.path.isdir(local_path):
         os.mkdir(local_path)
-    host = re.findall('http://(.*?)/upgcxcode',url)[0]
+    host_test1 = re.findall('http://(.*?)/upgcxcode',url)
+    host_test2 = re.findall('https://(.*?)/upgcxcode',url)
+    if len(host_test1) > 0:
+        print('http')
+        host = host_test1[0]
+    else:
+        print('https')
+        host = host_test2[0]
+
     print(host)
     headers = {
         'Host': host,
@@ -189,7 +202,14 @@ def download_flvs(urls,aid,local_path = None,file_type = 'flv',file_name = None)
 
     file_num = 0
     for url in urls:
-        host = re.findall('http://(.*?)/upgcxcode',url)[0]
+        host_test1 = re.findall('http://(.*?)/upgcxcode',url)
+        host_test2 = re.findall('https://(.*?)/upgcxcode',url)
+        if len(host_test1) > 0:
+            print('http')
+            host = host_test1[0]
+        else:
+            print('https')
+            host = host_test2[0]
         print(host)
         headers = {
             'Host': host,
@@ -221,8 +241,7 @@ def get_oneVC_json():
     '''
     url = 'http://api.vc.bilibili.com/clip/v1/video/detail?'
     headers = {
-        'User - Agent':
-            'Mozilla/5.0(Windows NT 10.0; WOW64) AppleWebKit/537.36(KHTML, like Gecko) Chrome/70.0.3534.4Safari/537.36'
+        'User - Agent':USERAGRNT
     } #头貌似这样就够了
 
     params = {
@@ -247,8 +266,7 @@ def get_TAVC_jsons():
     '''
     url = 'http://api.vc.bilibili.com/clip/v1/video/ones?'
     headers = {
-        'User - Agent':
-            'Mozilla/5.0(Windows NT 10.0; WOW64) AppleWebKit/537.36(KHTML, like Gecko) Chrome/70.0.3534.4Safari/537.36'
+        'User - Agent':USERAGRNT
     } #头貌似这样就够了
 
     params = {
@@ -288,8 +306,7 @@ def vc_download(html):
     path = 'bilibili_vc.mp4'
     url = 'http://upos-hz-mirrorkodo.acgvideo.com/dspxcode/i181106wspact0phwm5z1gnqsas2c01t-1-56.mp4?um_deadline=1541653904&rate=500000&oi=2061733477&um_sign=5bcd5065390e86cbc4b4d11f31b2f597&gen=dsp&wsTime=1541653904&platform=html5'
     headers = {
-        'User - Agent':
-            'Mozilla/5.0(Windows NT 10.0; WOW64) AppleWebKit/537.36(KHTML, like Gecko) Chrome/70.0.3534.4Safari/537.36'
+        'User - Agent':USERAGRNT
     }
 
 def vc_TA_download(html):
@@ -320,8 +337,7 @@ def vc_TA_download(html):
 
 def download(url,path):
     headers = {
-        'User - Agent':
-            'Mozilla/5.0(Windows NT 10.0; WOW64) AppleWebKit/537.36(KHTML, like Gecko) Chrome/70.0.3534.4Safari/537.36'
+        'User - Agent':USERAGRNT
     }
     response = requests.get(url,headers=headers,stream=True)
     chunk_size = 1024  # 每次下载的数据大小
@@ -344,13 +360,11 @@ def get_from_url(url,loacl_path = None,index = None):
         'Connection': 'keep-alive',
         'Cache-Control': 'max-age = 0',
         'Upgrade-Insecure-Requests': '1',
-        'User-Agent':
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.80 Safari/537.36',
+        'User-Agent':USERAGRNT,
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
         'Accept-Encoding': 'gzip, deflate,br',
         'Accept-Language': 'zh-CN,zh;q=0.9',
-        'Cookie': 'LIVE_BUVID=AUTO1515149705744511; fts=1514987102; buvid3=24187AEB-8DF0-4376-866B-F1675054F7D123662infoc; pgv_pvi=531680256; rpdid=olpksilwwsdosoplqmoww; im_notify_type_40745909=0; stardustvideo=1; UM_distinctid=165af12253a9bc-01c9b0cc001639-74173d4f-1fa400-165af12253c332; CURRENT_FNVAL=16; pos=3; _uuid=FEA87AF3-C1D8-61D8-D1D5-86926BCC7C6359589infoc; Hm_lvt_8a6e55dbd2870f0f5bc9194cddf32a02=1541642139; sid=jcfegf0q; CURRENT_QUALITY=64; bp_t_offset_40745909=220192575153103178; finger=17c9e5f5; DedeUserID=40745909; DedeUserID__ckMd5=50c54dcd485a8634; SESSDATA=056c38dd%2C1553642772%2C3456a621; bili_jct=6c5769cf41bc49479ba0c8afb26bff6d; _dfcaptcha=44fdc9360b372c8e5a1cc6cd6fe9faf0'
-
+        'Cookie': COOKIE
     }
     requests.packages.urllib3.disable_warnings()
     html = requests.get(url, headers = header ,verify=False)
@@ -359,6 +373,7 @@ def get_from_url(url,loacl_path = None,index = None):
     aid = re.findall(r'"aid":(\d+?),',html.text)[0]
     mid = re.findall(r'"mid":(\d+)?}',html.text)[0]
     print(aid,mid)
+    time.sleep(2)
     get_playerURL_Vide0_m4s(url,aid,mid,loacl_path,index)
 
 def test_get_html(url):
@@ -373,13 +388,11 @@ def test_get_html(url):
         'Connection': 'keep-alive',
         'Cache-Control': 'max-age = 0',
         'Upgrade-Insecure-Requests': '1',
-        'User-Agent':
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.80 Safari/537.36',
+        'User-Agent':USERAGRNT,
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
         'Accept-Encoding': 'gzip, deflate,br',
         'Accept-Language': 'zh-CN,zh;q=0.9',
-        'Cookie': 'LIVE_BUVID=AUTO1515149705744511; fts=1514987102; buvid3=24187AEB-8DF0-4376-866B-F1675054F7D123662infoc; pgv_pvi=531680256; rpdid=olpksilwwsdosoplqmoww; im_notify_type_40745909=0; stardustvideo=1; UM_distinctid=165af12253a9bc-01c9b0cc001639-74173d4f-1fa400-165af12253c332; CURRENT_FNVAL=16; pos=3; _uuid=FEA87AF3-C1D8-61D8-D1D5-86926BCC7C6359589infoc; Hm_lvt_8a6e55dbd2870f0f5bc9194cddf32a02=1541642139; sid=jcfegf0q; CURRENT_QUALITY=64; bp_t_offset_40745909=220192575153103178; finger=17c9e5f5; DedeUserID=40745909; DedeUserID__ckMd5=50c54dcd485a8634; SESSDATA=056c38dd%2C1553642772%2C3456a621; bili_jct=6c5769cf41bc49479ba0c8afb26bff6d; _dfcaptcha=44fdc9360b372c8e5a1cc6cd6fe9faf0'
-
+        'Cookie':COOKIE
     }
     requests.packages.urllib3.disable_warnings()
     html = requests.get(url, headers=header, verify=False)
@@ -394,25 +407,25 @@ def test_get_html(url):
         'Connection': 'keep-alive',
         'Cache-Control': 'max-age = 0',
         'Upgrade-Insecure-Requests': '1',
-        'User-Agent':
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.80 Safari/537.36',
+        'User-Agent':USERAGRNT,
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
         'Referer': 'https://space.bilibilicom/' + str(mid) + '/',  # 这里是up主号 要注意
         'Accept-Encoding': 'gzip, deflate,br',
         'Accept-Language': 'zh-CN,zh;q=0.9',
-        'Cookie': 'LIVE_BUVID=AUTO1515149705744511; fts=1514987102; buvid3=24187AEB-8DF0-4376-866B-F1675054F7D123662infoc; pgv_pvi=531680256; rpdid=olpksilwwsdosoplqmoww; im_notify_type_40745909=0; stardustvideo=1; UM_distinctid=165af12253a9bc-01c9b0cc001639-74173d4f-1fa400-165af12253c332; CURRENT_FNVAL=16; pos=3; _uuid=FEA87AF3-C1D8-61D8-D1D5-86926BCC7C6359589infoc; Hm_lvt_8a6e55dbd2870f0f5bc9194cddf32a02=1541642139; sid=jcfegf0q; CURRENT_QUALITY=64; bp_t_offset_40745909=220192575153103178; finger=17c9e5f5; DedeUserID=40745909; DedeUserID__ckMd5=50c54dcd485a8634; SESSDATA=056c38dd%2C1553642772%2C3456a621; bili_jct=6c5769cf41bc49479ba0c8afb26bff6d; _dfcaptcha=44fdc9360b372c8e5a1cc6cd6fe9faf0'
-
+        'Cookie':COOKIE
     }
     print(url)
     html = requests.get(url, headers=header,verify=False)
     print(html)
     print(html.text)
     flv_url = re.findall(r'"url":"(.*?flv.*?)?","backup_url"', html.text)
-    vedio_url = re.findall(r'"id":64,"baseUrl":"(.*?m4s.*?)?",',html.text)
+    vedio_url = re.findall(r'"id":80,"baseUrl":"(.*?m4s.*?)?",',html.text)
+    audio_url = re.findall(r'"id":30280,"baseUrl":"(.*?m4s.*?)?","backupUrl"', html.text)
     file_name = re.findall(r'"part":"(.*?)?"',html.text)
     print(len(flv_url),len(vedio_url))
     print(flv_url)
     print(vedio_url)
+    print(audio_url)
     print(file_name)
 
 
@@ -422,13 +435,11 @@ def get_vedio_more(url,loacl_path = None):
         'Connection': 'keep-alive',
         'Cache-Control': 'max-age = 0',
         'Upgrade-Insecure-Requests': '1',
-        'User-Agent':
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.80 Safari/537.36',
+        'User-Agent':USERAGRNT,
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
         'Accept-Encoding': 'gzip, deflate,br',
         'Accept-Language': 'zh-CN,zh;q=0.9',
-        'Cookie': 'LIVE_BUVID=AUTO1515149705744511; fts=1514987102; buvid3=24187AEB-8DF0-4376-866B-F1675054F7D123662infoc; pgv_pvi=531680256; rpdid=olpksilwwsdosoplqmoww; im_notify_type_40745909=0; stardustvideo=1; UM_distinctid=165af12253a9bc-01c9b0cc001639-74173d4f-1fa400-165af12253c332; CURRENT_FNVAL=16; pos=3; _uuid=FEA87AF3-C1D8-61D8-D1D5-86926BCC7C6359589infoc; Hm_lvt_8a6e55dbd2870f0f5bc9194cddf32a02=1541642139; sid=jcfegf0q; CURRENT_QUALITY=64; bp_t_offset_40745909=220192575153103178; finger=17c9e5f5; DedeUserID=40745909; DedeUserID__ckMd5=50c54dcd485a8634; SESSDATA=056c38dd%2C1553642772%2C3456a621; bili_jct=6c5769cf41bc49479ba0c8afb26bff6d; _dfcaptcha=44fdc9360b372c8e5a1cc6cd6fe9faf0'
-
+        'Cookie': COOKIE
     }
     requests.packages.urllib3.disable_warnings()
     html = requests.get(url, headers=header, verify=False)
@@ -437,12 +448,12 @@ def get_vedio_more(url,loacl_path = None):
     mid = re.findall(r'"mid":(\d+)?}', html.text)[0]
     vedios = re.findall(r'"aid":'+str(aid)+r',"videos":(\d+)?,',html.text)[0]
     print(aid, mid,vedios)
-    for i in range(1,int(vedios)+1):
-        url_t = url + '?p' + str(i)
+    for i in range(1,int(vedios)+1):    
         get_from_url(url_t,loacl_path,index=i)
+        url_t = url + '?p' + str(i)
 
 if __name__ == '__main__':
     #get_from_url('https://www.bilibili.com/video/av29463507?p=3','E:\\spiderFile\\bilibili\\概率论与数理统计',3)
     #get_vedio_more(r'https://www.bilibili.com/video/av29463507','E:\\spiderFile\\bilibili\\概率论与数理统计')
-    #test_get_html('https://www.bilibili.com/video/av54121244')
-    get_from_url('https://www.bilibili.com/video/av55246821','E:\\spiderFile\\bilibili\\Senorita')
+    #test_get_html('https://www.bilibili.com/video/BV157411w7Ao?p=1')
+    get_from_url('https://www.bilibili.com/video/BV1Vf4y1m7Qo?p=2','E:\\spiderFile\\bilibili\\月光下的猫女')
